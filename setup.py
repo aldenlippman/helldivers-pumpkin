@@ -21,7 +21,6 @@ setup(
     entry_points={
         'console_scripts': [
             'helldivers = carving_plan.helldivers_path:main',
-            'talker = carving_plan.test:main',
         ],
     },
 )

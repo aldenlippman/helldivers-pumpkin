@@ -5,6 +5,9 @@ import math
 import rclpy
 from rclpy.node import Node
 
+# YAML Export Utility
+from carving_plan.export_utility import ExportUtility
+
 # ROS Data Types
 from std_msgs.msg import Header
 from geometry_msgs.msg import PoseArray, Pose, Point
@@ -43,8 +46,8 @@ class HelldiversPumpkinPath(Node):
         self.req = PlanMotion.Request()
 
 
-    def send_request(self, request):
-    
+    def send_request(self):
+        
         self.future = self.cli.call_async(self.req)
         rclpy.spin_until_future_complete(self, self.future)
         return self.future.result()
@@ -52,7 +55,7 @@ class HelldiversPumpkinPath(Node):
     def generate_tool_path_left(self):
 
         pumpkin_segment = PoseArray()
-        pumpkin_segment.header.frame_id = "world"
+        pumpkin_segment.header.frame_id = "pumpkin_face"
 
         #Origin is top left corner
         pumpkin_segment.poses.append(self.add_waypoint(0.0, 0.0, 0.0))
@@ -89,7 +92,7 @@ class HelldiversPumpkinPath(Node):
     def generate_tool_path_right(self):
 
         pumpkin_segment = PoseArray()
-        pumpkin_segment.header.frame_id = "world"
+        pumpkin_segment.header.frame_id = "pumpkin_face"
 
         #Origin is top left corner
         pumpkin_segment.poses.append(self.add_waypoint(0.15,0.0,0.0,0.0,0.0,0.0))
@@ -125,7 +128,7 @@ class HelldiversPumpkinPath(Node):
     def generate_tool_path_left_eye(self):
 
         pumpkin_segment = PoseArray()
-        pumpkin_segment.header.frame_id = "world"
+        pumpkin_segment.header.frame_id = "pumpkin_face"
 
         #Origin is top left corner
         pumpkin_segment.poses.append(self.add_waypoint(0.0585,(0.15-0.0715), 0.0))
@@ -150,7 +153,7 @@ class HelldiversPumpkinPath(Node):
     def generate_tool_path_right_eye(self):
 
         pumpkin_segment = PoseArray()
-        pumpkin_segment.header.frame_id = "world"
+        pumpkin_segment.header.frame_id = "pumpkin_face"
 
         #Origin is top left corner
         pumpkin_segment.poses.append(self.add_waypoint(0.0915,(0.15-0.0715), 0.0))
@@ -175,7 +178,7 @@ class HelldiversPumpkinPath(Node):
     def generate_tool_path_mouth(self):
 
         pumpkin_segment = PoseArray()
-        pumpkin_segment.header.frame_id = "world"
+        pumpkin_segment.header.frame_id = "pumpkin_face"
 
         #Origin is top left corner
         pumpkin_segment.poses.append(self.add_waypoint(0.0725,(0.15-0.05125), 0.0))
@@ -192,7 +195,7 @@ class HelldiversPumpkinPath(Node):
 
         # Generate lines
         tool_path_lines = Marker()
-        tool_path_lines.header.frame_id = "world"
+        tool_path_lines.header.frame_id = "pumpkin_face"
         tool_path_lines.type = Marker.LINE_STRIP
         tool_path_lines.action = Marker.ADD
         tool_path_lines.pose.orientation.w = 1.0
@@ -221,8 +224,6 @@ class HelldiversPumpkinPath(Node):
         waypoint.orientation.z = oz
         waypoint.orientation.w = 1.0
         return waypoint
-
-
 
 def main(args=None):
 
@@ -254,14 +255,14 @@ def main(args=None):
     minimal_client.pose_array_publisher_4_.publish(tool_path_mouth)
     minimal_client.line_publisher_4_.publish(minimal_client.plot_rviz(tool_path_mouth))
     # minimal_client.get_logger().info("Attempted to publish")
-
-
-    while True:
-        #minimal_client.get_logger().info("Spin once (1 sec)...")
-        rclpy.spin_once(minimal_client, timeout_sec=1.0)
+    
+    # Write out toolpath to YAML
+    ExportUtility("log").write_pose_array_list_to_yaml(minimal_client.req.path)
+    
 
     # Send Motion Plan Request
-    #motion_plan_response = minimal_client.send_request()
+    minimal_client.get_logger().info("Attempting to call motion planner!")
+    motion_plan_response = minimal_client.send_request()
 
 
     # Print info about reponse
@@ -269,15 +270,14 @@ def main(args=None):
     # TODO
     # minimal_client.get_logger().info()
 
-    rclpy.spin(minimal_client)
+    trajectory_msg = motion_plan_response.trajectory
 
-    # try:
-    #     # rclpy.spin(minimal_client)
+    print(trajectory_msg)
+    # minimal_client.get_logger().info(trajectory_msg)
 
-    # except (KeyboardInterrupt, ExternalShutdownException):
 
-    #     minimal_client.destroy_node()
-    #     rclpy.shutdown()
+    rclpy.spin_once(minimal_client)
+    ExportUtility("log").write_joint_trajectory_to_yaml(trajectory_msg)
 
 
 if __name__ == '__main__':
