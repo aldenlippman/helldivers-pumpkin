@@ -16,7 +16,7 @@ from visualization_msgs.msg import Marker
 # Project Specific Data Types
 from pumpkin_msgs.srv import PlanMotion
 
-PUSH_IN = 0.01
+PUSH_IN = 0.04
 
 
 # Node
